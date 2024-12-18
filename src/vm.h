@@ -15,10 +15,11 @@
 #define REG_G9 9
 #define REG_G10 10
 #define REG_SP 11
-#define REG_IP 12
-#define REG_FLAGS 13
-#define REG_PGTBL 14
-#define REG_ERR 15
+#define REG_FP 12
+#define REG_IP 13
+#define REG_FLAGS 14
+#define REG_PGTBL 15
+#define REG_ERR 16
 
 #define REG_FLAGS_CARRY 1
 #define REG_FLAGS_ZERO 2
@@ -28,7 +29,7 @@
 
 typedef struct {
     // Registers
-    uint64_t Registers[16];
+    uint64_t Registers[17];
 
     uint8_t *Ram;
     size_t RamSize;

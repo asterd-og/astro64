@@ -4,7 +4,7 @@
 
 uint64_t AstroVmTraverseExpect(uint64_t *Level, uint8_t Entry, uint8_t Flags) {
     if ((Level[Entry] & Flags) != Flags) {
-        return 1; // It should never return 1 if it finds a valid entry because it masks 0xff
+        return 1; // It should never return 1 if it finds a valid entry because it masks out 0xff
     }
     return (uint64_t)(Level[Entry] & ~(uint8_t)0xFF);
 }
@@ -24,6 +24,14 @@ uint64_t AstroVmGetPhysPage(AstroVm *Vm, uint64_t Address, uint8_t Flags) {
     return Pml1;
 }
 
+#define READ_PHYS(Vm, Address, Type)      \
+    if (Address >= Vm->RamSize) { \
+    Vm->Registers[REG_ERR] |= REG_ERR_PAGE_FAULT; \
+    return 0; \
+    } \
+    Type *AccessPtr = (Type*)(Vm->Ram + Address); \
+    return *AccessPtr
+
 uint64_t AstroVmRead64(AstroVm *Vm, uint64_t Address) {
     if (Vm->Registers[REG_FLAGS] & REG_FLAGS_PAGING) {
         uint64_t PhysPage = AstroVmGetPhysPage(Vm, Address, MM_READ);
@@ -31,8 +39,7 @@ uint64_t AstroVmRead64(AstroVm *Vm, uint64_t Address) {
         uint64_t *AccessPtr = (uint64_t*)(Vm->Ram + PhysPage + Offset);
         return *AccessPtr;
     }
-    uint64_t *ReadPtr = (uint64_t*)(Vm->Ram + Address);
-    return *ReadPtr;
+    READ_PHYS(Vm, Address, uint64_t);
 }
 
 uint32_t AstroVmRead32(AstroVm *Vm, uint64_t Address) {
@@ -42,8 +49,7 @@ uint32_t AstroVmRead32(AstroVm *Vm, uint64_t Address) {
         uint32_t *AccessPtr = (uint32_t*)(Vm->Ram + PhysPage + Offset);
         return *AccessPtr;
     }
-    uint32_t *ReadPtr = (uint32_t*)(Vm->Ram + Address);
-    return *ReadPtr;
+    READ_PHYS(Vm, Address, uint32_t);
 }
 
 uint16_t AstroVmRead16(AstroVm *Vm, uint64_t Address) {
@@ -53,8 +59,7 @@ uint16_t AstroVmRead16(AstroVm *Vm, uint64_t Address) {
         uint16_t *AccessPtr = (uint16_t*)(Vm->Ram + PhysPage + Offset);
         return *AccessPtr;
     }
-    uint16_t *ReadPtr = (uint16_t*)(Vm->Ram + Address);
-    return *ReadPtr;
+    READ_PHYS(Vm, Address, uint16_t);
 }
 
 uint8_t AstroVmRead8(AstroVm *Vm, uint64_t Address) {
@@ -64,9 +69,16 @@ uint8_t AstroVmRead8(AstroVm *Vm, uint64_t Address) {
         uint8_t *AccessPtr = (uint8_t*)(Vm->Ram + PhysPage + Offset);
         return *AccessPtr;
     }
-    uint8_t *ReadPtr = (uint8_t*)(Vm->Ram + Address);
-    return *ReadPtr;
+    READ_PHYS(Vm, Address, uint8_t);
 }
+
+#define WRITE_PHYS(Vm, Address, Data, Type)      \
+    if (Address >= Vm->RamSize) { \
+    Vm->Registers[REG_ERR] |= REG_ERR_PAGE_FAULT; \
+    return; \
+    } \
+    Type *AccessPtr = (Type*)(Vm->Ram + Address); \
+    *AccessPtr = Data
 
 void AstroVmWrite64(AstroVm *Vm, uint64_t Address, uint64_t Data) {
     if (Vm->Registers[REG_FLAGS] & REG_FLAGS_PAGING) {
@@ -76,8 +88,7 @@ void AstroVmWrite64(AstroVm *Vm, uint64_t Address, uint64_t Data) {
         *AccessPtr = Data;
         return;
     }
-    uint64_t *AccessPtr = (uint64_t*)(Vm->Ram + Address);
-    *AccessPtr = Data;
+    WRITE_PHYS(Vm, Address, Data, uint64_t);
 }
 
 void AstroVmWrite32(AstroVm *Vm, uint64_t Address, uint32_t Data) {
@@ -88,8 +99,7 @@ void AstroVmWrite32(AstroVm *Vm, uint64_t Address, uint32_t Data) {
         *AccessPtr = Data;
         return;
     }
-    uint32_t *AccessPtr = (uint32_t*)(Vm->Ram + Address);
-    *AccessPtr = Data;
+    WRITE_PHYS(Vm, Address, Data, uint32_t);
 }
 
 void AstroVmWrite16(AstroVm *Vm, uint64_t Address, uint16_t Data) {
@@ -100,8 +110,7 @@ void AstroVmWrite16(AstroVm *Vm, uint64_t Address, uint16_t Data) {
         *AccessPtr = Data;
         return;
     }
-    uint16_t *AccessPtr = (uint16_t*)(Vm->Ram + Address);
-    *AccessPtr = Data;
+    WRITE_PHYS(Vm, Address, Data, uint16_t);
 }
 
 void AstroVmWrite8(AstroVm *Vm, uint64_t Address, uint8_t Data) {
@@ -112,8 +121,7 @@ void AstroVmWrite8(AstroVm *Vm, uint64_t Address, uint8_t Data) {
         *AccessPtr = Data;
         return;
     }
-    uint8_t *AccessPtr = (uint8_t*)(Vm->Ram + Address);
-    *AccessPtr = Data;
+    WRITE_PHYS(Vm, Address, Data, uint8_t);
 }
 
 uint64_t AstroVmRead(AstroVm *Vm, uint64_t Address, uint8_t Size) {

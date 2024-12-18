@@ -1,11 +1,22 @@
 # Astro64 Design
 ## Instructions
-1. nop
-2. add(8|16|32|64) (src off r|imm) src <r|m|imm> (dst off r|imm) dest <r|m>
-3. sub(8|16|32|64) (src off r|imm) src <r|m|imm> (dst off r|imm) dest <r|m>
-4. mul(8|16|32|64) (src off r|imm) src <r|m|imm> (dst off r|imm) dest <r|m>
+0. nop
+1. add(8|16|32|64) (src off r|imm) src <r|m|imm> (dst off r|imm) dest <r|m>
+2. sub(8|16|32|64) (src off r|imm) src <r|m|imm> (dst off r|imm) dest <r|m>
+3. mul(8|16|32|64) (src off r|imm) src <r|m|imm> (dst off r|imm) dest <r|m>
+4. div(8|16|32|64) (src off r|imm) src <r|m|imm> (dst off r|imm) dest <r|m>
 5. mov(8|16|32|64) (src off r|imm) src <r|m|imm> (dst off r|imm) dest <r|m>
-6. jmp flags (cond & rel or abs) (dst off r|imm) dest <r|m|imm>
+6. jmp flags (cond & rel or abs) (src off r|imm) src <r|m|imm>
+7. push(8|16|32|64) (src off r|imm) src <r|m|imm>
+8. pop(8|16|32|64) (dst off r|imm) dst <r|m|imm>
+9. call (src off r|imm) src <r|m|imm>
+10. ret
+11. and(8|16|32|64) (src off r|imm) src <r|m|imm> (dst off r|imm) dest <r|m>
+12. or(8|16|32|64) (src off r|imm) src <r|m|imm> (dst off r|imm) dest <r|m>
+13. xor(8|16|32|64) (src off r|imm) src <r|m|imm> (dst off r|imm) dest <r|m>
+14. not(8|16|32|64) (dst off r|imm) dest <r|m>
+15. shl(8|16|32|64) (src off r|imm) src <r|m|imm> (dst off r|imm) dest <r|m>
+16. shr(8|16|32|64) (src off r|imm) src <r|m|imm> (dst off r|imm) dest <r|m>
 ---
 - Encoding:
  Encoding can change
@@ -30,9 +41,10 @@
 3. Reg Off Src
 4. Reg Off Dst
 ## Registers
-- Astro64 contains 16 registers:
+- Astro64 contains 17 registers:
   - g0 ... g10 = General Purpose
   - sp = Stack Pointer
+  - fp = Frame Pointer
   - ip = Instruction Pointer
   - flags = General Flags (Paging enabled, Interrupts enabled, etc)
   - pgtbl = Page Table Address (Physical address)
