@@ -17,6 +17,9 @@
 14. not(8|16|32|64) (dst off r|imm) dest <r|m>
 15. shl(8|16|32|64) (src off r|imm) src <r|m|imm> (dst off r|imm) dest <r|m>
 16. shr(8|16|32|64) (src off r|imm) src <r|m|imm> (dst off r|imm) dest <r|m>
+17. sei (set enable interrupts)
+18. sdi (set disable interrupts)
+19. int (src off r|imm) src <r|m|imm>
 ---
 - Encoding:
  Encoding can change
@@ -48,10 +51,13 @@
   - ip = Instruction Pointer
   - flags = General Flags (Paging enabled, Interrupts enabled, etc)
   - pgtbl = Page Table Address (Physical address)
-  - err = Error Code (Page Fault, Debug, Division by 0, etc)
+  - ivtbl = Interrupt Vector Table
 ---
 ### Flags:
- 2. Paging enabled
+ 1. Carry
+ 2. Zero
+ 3. Paging enabled
+ 4. Interrupts enabled
 ## Memory
 - Astro64 has 2 memory addressing modes: Physical & Virtual.
 ### Virtual memory design
@@ -59,3 +65,15 @@
 ```
 13 Bits unused | 8 Bits PML5 | 8 Bits PML4 | 8 Bits PML3 | 8 Bits PML2 | 8 Bits PML1 | 11 Bits Page Offset
 ```
+## Interrupts
+### Interrupt Vector (IV)
+| Size | Name         |
+| ---- | ------------ |
+| 8    | Handler Addr |
+| 1    | Flags        |
+### Interrupt Vector Table (IVT)
+| Size | Name       |
+| ---- | ---------- |
+| 8    | Table Addr |
+| 1    | Count      |
+- Table Addr should point to the address of a table that holds an array of IVs (Interrupt Vectors) in a row.

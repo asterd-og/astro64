@@ -22,3 +22,5 @@ void AstroVmWrite8(AstroVm *Vm, uint64_t Address, uint8_t Data);
 uint64_t AstroVmRead(AstroVm *Vm, uint64_t Address, uint8_t Size);
 void AstroVmWrite(AstroVm *Vm, uint64_t Address, uint64_t Data, uint8_t Size);
 
+void *AstroVmGetPtr(AstroVm *Vm, uint64_t Address);
+

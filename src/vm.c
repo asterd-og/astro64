@@ -1,6 +1,7 @@
 #include "vm.h"
 #include "inst.h"
 #include "mem.h"
+#include "int.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,6 +24,9 @@ void AstroVmXorInst(AstroVm*, AstroVmInst*);
 void AstroVmNotInst(AstroVm*, AstroVmInst*);
 void AstroVmShlInst(AstroVm*, AstroVmInst*);
 void AstroVmShrInst(AstroVm*, AstroVmInst*);
+void AstroVmSeiInst(AstroVm*, AstroVmInst*);
+void AstroVmSdiInst(AstroVm*, AstroVmInst*);
+void AstroVmIntInst(AstroVm*, AstroVmInst*);
 
 AstroVmInstHandler AstroVmInstHandlers[64] = {
     AstroVmNopInst, AstroVmAddInst, AstroVmSubInst,
@@ -30,7 +34,8 @@ AstroVmInstHandler AstroVmInstHandlers[64] = {
     AstroVmJmpInst, AstroVmPushInst, AstroVmPopInst,
     AstroVmCallInst, AstroVmRetInst, AstroVmAndInst,
     AstroVmOrInst, AstroVmXorInst, AstroVmNotInst,
-    AstroVmShlInst, AstroVmShrInst
+    AstroVmShlInst, AstroVmShrInst, AstroVmSeiInst,
+    AstroVmSdiInst, AstroVmIntInst
 };
 
 AstroVm *AstroVmInitialise(size_t RamSize) {
@@ -53,12 +58,25 @@ void AstroVmLoadProgram(AstroVm *Vm, uint8_t *Data, size_t Size) {
     memcpy(Vm->Ram, Data, Size);
 }
 
-void AstroVmStep(AstroVm *Vm) {
+void AstroVmPush(AstroVm *Vm, uint64_t Data, size_t Size) {
+    Vm->Registers[REG_SP] -= 1 << Size;
+    AstroVmWrite(Vm, Vm->Registers[REG_SP], Data, Size);
+}
+
+uint64_t AstroVmPop(AstroVm *Vm, size_t Size) {
+    uint64_t Data = AstroVmRead(Vm, Vm->Registers[REG_SP], Size);
+    Vm->Registers[REG_SP] += 1 << Size;
+    return Data;
+}
+
+void AstroVmStep(AstroVm *Vm, bool Debug) {
     AstroVmInst Inst = AstroVmGetInst(Vm);
-    printf("Size: %d, Op code: %d, Flags: %d\n",
-           Inst.Size, Inst.OpCode, Inst.Flags);
+    if (Debug)
+        printf("Size: %d, Op code: %d, Flags: %d\n",
+               Inst.Size, Inst.OpCode, Inst.Flags);
     Vm->Registers[REG_IP] += 2;
     AstroVmInstHandlers[Inst.OpCode](Vm, &Inst);
+    AstroVmRunQueuedInt(Vm);
 }
 
 uint64_t AstroVmGetSrc(AstroVm *Vm, AstroVmInst *Inst, bool IncIP) {
@@ -214,6 +232,16 @@ void AstroVmNopInst(AstroVm *Vm, AstroVmInst *Inst) {
     AstroVmSetDst(Vm, Inst, Res, true); \
     Zero = Res == 0
 
+#define SET_FLAGS(Vm, Carry, Zero) \
+    if (Carry) \
+        Vm->Registers[REG_FLAGS] |= REG_FLAGS_CARRY; \
+    else \
+        Vm->Registers[REG_FLAGS] &= ~REG_FLAGS_CARRY; \
+    if (Zero) \
+        Vm->Registers[REG_FLAGS] |= REG_FLAGS_ZERO; \
+    else \
+        Vm->Registers[REG_FLAGS] &= ~REG_FLAGS_ZERO
+
 void AstroVmAddInst(AstroVm *Vm, AstroVmInst *Inst) {
     bool Carry = false;
     bool Zero = false;
@@ -236,10 +264,7 @@ void AstroVmAddInst(AstroVm *Vm, AstroVmInst *Inst) {
     }
     }
 
-    if (Carry)
-        Vm->Registers[REG_FLAGS] |= REG_FLAGS_CARRY;
-    if (Zero)
-        Vm->Registers[REG_FLAGS] |= REG_FLAGS_ZERO;
+    SET_FLAGS(Vm, Carry, Zero);
 }
 
 void AstroVmSubInst(AstroVm *Vm, AstroVmInst *Inst) {
@@ -264,10 +289,7 @@ void AstroVmSubInst(AstroVm *Vm, AstroVmInst *Inst) {
     }
     }
 
-    if (Carry)
-        Vm->Registers[REG_FLAGS] |= REG_FLAGS_CARRY;
-    if (Zero)
-        Vm->Registers[REG_FLAGS] |= REG_FLAGS_ZERO;
+    SET_FLAGS(Vm, Carry, Zero);
 }
 
 void AstroVmMulInst(AstroVm *Vm, AstroVmInst *Inst) {
@@ -292,10 +314,7 @@ void AstroVmMulInst(AstroVm *Vm, AstroVmInst *Inst) {
     }
     }
 
-    if (Carry)
-        Vm->Registers[REG_FLAGS] |= REG_FLAGS_CARRY;
-    if (Zero)
-        Vm->Registers[REG_FLAGS] |= REG_FLAGS_ZERO;
+    SET_FLAGS(Vm, Carry, Zero);
 }
 
 void AstroVmDivInst(AstroVm*, AstroVmInst*) {
@@ -328,29 +347,23 @@ void AstroVmJmpInst(AstroVm *Vm, AstroVmInst *Inst) {
 
 void AstroVmPushInst(AstroVm *Vm, AstroVmInst *Inst) {
     uint64_t Source = AstroVmGetSrc(Vm, Inst, true);
-    AstroVmWrite(Vm, Vm->Registers[REG_SP], Source, Inst->Size);
-    Vm->Registers[REG_SP] -= 1 << Inst->Size;
+    AstroVmPush(Vm, Source, Inst->Size);
 }
 
 void AstroVmPopInst(AstroVm *Vm, AstroVmInst *Inst) {
-    Vm->Registers[REG_SP] += 1 << Inst->Size;
-    uint64_t Source = AstroVmRead(Vm, Vm->Registers[REG_SP], Inst->Size);
+    uint64_t Source = AstroVmPop(Vm, Inst->Size);
     AstroVmSetDst(Vm, Inst, Source, true);
 }
 
 void AstroVmCallInst(AstroVm *Vm, AstroVmInst *Inst) {
     uint64_t Address = AstroVmGetSrc(Vm, Inst, true);
     // TODO: Handle relative & absolute
-    uint64_t Source = Vm->Registers[REG_IP];
-    AstroVmWrite64(Vm, Vm->Registers[REG_SP], Source);
-    Vm->Registers[REG_SP] -= 8;
+    AstroVmPush(Vm, Vm->Registers[REG_IP], 3);
     Vm->Registers[REG_IP] = Address;
 }
 
 void AstroVmRetInst(AstroVm *Vm, AstroVmInst *Inst) {
-    Vm->Registers[REG_SP] += 8;
-    uint64_t Source = AstroVmRead64(Vm, Vm->Registers[REG_SP]);
-    Vm->Registers[REG_IP] = Source;
+    Vm->Registers[REG_IP] = AstroVmPop(Vm, 3);
 }
 
 #define LOGICAL_OP(Vm, Inst, Type, Op)             \
@@ -489,6 +502,19 @@ void AstroVmShrInst(AstroVm *Vm, AstroVmInst *Inst) {
     }
 }
 
+void AstroVmSeiInst(AstroVm *Vm, AstroVmInst *Inst) {
+    Vm->Registers[REG_FLAGS] |= REG_FLAGS_INT;
+}
+
+void AstroVmSdiInst(AstroVm *Vm, AstroVmInst *Inst) {
+    Vm->Registers[REG_FLAGS] &= ~REG_FLAGS_INT;
+}
+
+void AstroVmIntInst(AstroVm *Vm, AstroVmInst *Inst) {
+    uint8_t Vector = AstroVmGetSrc(Vm, Inst, true);
+    AstroVmRaiseInt(Vm, Vector);
+}
+
 void AstroVmDumpRegs(AstroVm *Vm) {
     for (int i = 0; i <= 10; i++)
         printf("G%d: 0x%lx\n", i, Vm->Registers[i]);
@@ -497,7 +523,7 @@ void AstroVmDumpRegs(AstroVm *Vm) {
     printf("IP: 0x%lx\n", Vm->Registers[REG_IP]);
     printf("Flags: 0x%lx\n", Vm->Registers[REG_FLAGS]);
     printf("PgTbl: 0x%lx\n", Vm->Registers[REG_PGTBL]);
-    printf("Err: 0x%lx\n", Vm->Registers[REG_ERR]);
+    printf("IVTbl: 0x%lx\n", Vm->Registers[REG_IVTBL]);
 }
 
 void AstroVmDestroy(AstroVm *Vm) {
