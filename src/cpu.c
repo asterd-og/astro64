@@ -416,8 +416,8 @@ void vm_sdi(vm_t *vm, vm_instr_t *instr) {
 }
 
 void vm_int(vm_t *vm, vm_instr_t *instr) {
-    printf("INT Not implemented.\n");
-    vm->halted = true;
+    uint8_t src = *((uint8_t*)vm_src_ptr(vm, instr));
+    vm_raise(vm, src);
 }
 
 void vm_cmp(vm_t *vm, vm_instr_t *instr) {

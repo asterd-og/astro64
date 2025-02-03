@@ -1,3 +1,3 @@
 all:
 	gcc $(shell find . -name "*.c") -o out/astro64 -lraylib -lm
-	./out/astro64 prg.bin
+	./out/astro64 -m 20M --firmware prg.bin --disk disk.img

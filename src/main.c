@@ -7,9 +7,12 @@
 #include <raylib.h>
 #include <signal.h>
 #include <assert.h>
+#include "main.h"
 #include "cpu.h"
 #include "ivt.h"
 #include "dev.h"
+#include "mem.h"
+#include "devices/disk.h"
 
 bool vm_running = true;
 
@@ -436,13 +439,78 @@ void *vm_thread(void *arg) {
     return NULL;
 }
 
+uint64_t convert_to_bytes(const char *str) {
+    uint64_t value = 0;
+    char unit = 0;
+    int i = 0;
+
+    while (str[i] && isdigit(str[i])) {
+        value = value * 10 + (str[i] - '0');
+        i++;
+    }
+
+    if (str[i])
+        unit = toupper(str[i]);
+
+    switch (unit) {
+        case 'K':
+            value *= 1024;
+            break;
+        case 'M':
+            value *= 1024 * 1024;
+            break;
+        case 'G':
+            value *= 1024 * 1024 * 1024;
+            break;
+        default:
+            break;
+    }
+
+    return value;
+}
+
 int main(int argc, char **argv) {
     cols = screen_width / font_width;
     rows = screen_height / font_height;
-    size_t rom_size = 0;
+
     size_t ram_size = 10 * 1024 * 1024; // 10 MB
-    uint8_t *rom = load_file(argv[1], &rom_size);
+
+    char *firmware_name = "";
+    char *disks_to_load[32];
+    int disks_to_load_count = 0;
+
+    for (int i = 1; i < argc; i++) {
+        if (!strcmp(argv[i], "-m")) {
+            i++;
+            ram_size = convert_to_bytes(argv[i]);
+        } else if (!strcmp(argv[i], "--firmware")) {
+            i++;
+            firmware_name = argv[i];
+        } else if (!strcmp(argv[i], "--disk")) {
+            i++;
+            char *disk_name = argv[i];
+            if (disks_to_load_count == 32) {
+                printf("Error: Tried to load too many disks. (Max is 32.)\n");
+                return 1;
+            }
+            disks_to_load[disks_to_load_count++] = disk_name;
+        }
+    }
+
+    size_t rom_size = 0; // Max of 64K (afterwards comes devices info at 0x10000)
+    uint8_t *rom = load_file(firmware_name, &rom_size);
+    if (rom_size > 64 * 1024) {
+        printf("Error: Firmware size exceeds 64K.\n");
+        return 1;
+    }
     vm_t *vm = vm_create(ram_size);
+    for (int i = 0; i < disks_to_load_count; i++) {
+        if (vm_disk_load(disks_to_load[i], "Astro64 Disk")) {
+            printf("Error: Failed to load disk %d.\n", i);
+            vm_destroy(vm);
+            return 1;
+        }
+    }
     vm_load_rom(vm, rom, rom_size);
 
     InitWindow(screen_width, screen_height, "Astro64 Emulator");
@@ -462,7 +530,6 @@ int main(int argc, char **argv) {
             break;
         }
 
-        vm_update_devices(vm);
         BeginDrawing();
         draw_screen(vm);
         EndDrawing();
@@ -471,6 +538,7 @@ int main(int argc, char **argv) {
     CloseWindow();
     vm_dump(vm);
     pthread_cancel(monitor);
+    vm_unload_devices();
 cleanup:
     vm_destroy(vm);
     return 0;
