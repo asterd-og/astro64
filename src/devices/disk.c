@@ -10,8 +10,11 @@ int disk_count = 0;
 
 pthread_t disk_dev_thread;
 
+#define DIV_ROUND_UP(x, y) (x + (y - 1)) / y
+#define ALIGN_UP(x, y) DIV_ROUND_UP(x, y) * y
+
 int vm_disk_load(char *file_name, char *disk_name) {
-    FILE *fp = fopen(file_name, "w+");
+    FILE *fp = fopen(file_name, "r+");
     if (!fp)
         return 1;
     disk_t *disk = (disk_t*)malloc(sizeof(disk_t));
@@ -19,9 +22,8 @@ int vm_disk_load(char *file_name, char *disk_name) {
     disk->fp = fp;
     disk->write = false;
     fseek(fp, 0, SEEK_END);
-    disk->sector_count = ftell(fp) / DISK_SECTOR_SIZE;
+    disk->sector_count = ALIGN_UP(ftell(fp), DISK_SECTOR_SIZE) / DISK_SECTOR_SIZE;
     rewind(fp);
-    disk->flags = DISK_RDY;
     disks[disk_count++] = disk;
     return 0;
 }
@@ -89,6 +91,17 @@ void *vm_disk_update(void *arg) {
                 end_sector = sector + vm_read64(vm, DISK_COUNT);
                 buffer = vm_read64(vm, DISK_BUFFER);
                 vm_write8(vm, DISK_STATUS, DISK_BSY);
+                continue;
+            }
+            if (command == DISK_INFO) {
+                disk->write = false;
+                buffer = vm_read64(vm, DISK_BUFFER);
+                vm_write8(vm, DISK_STATUS, DISK_BSY);
+                for (int i = 0; i < 32; i++) {
+                    vm_write8(vm, buffer + i, disk->name[i]);
+                }
+                vm_write64(vm, buffer + 32, disk->sector_count);
+                vm_write8(vm, DISK_STATUS, DISK_DONE);
                 continue;
             }
             printf("Warning: Unhandled disk command %d.\n", command);

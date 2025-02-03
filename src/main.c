@@ -505,7 +505,9 @@ int main(int argc, char **argv) {
     }
     vm_t *vm = vm_create(ram_size);
     for (int i = 0; i < disks_to_load_count; i++) {
-        if (vm_disk_load(disks_to_load[i], "Astro64 Disk")) {
+        char disk_name[16];
+        sprintf(disk_name, "ASTRO64 DISK #%02d", i);
+        if (vm_disk_load(disks_to_load[i], disk_name)) {
             printf("Error: Failed to load disk %d.\n", i);
             vm_destroy(vm);
             return 1;

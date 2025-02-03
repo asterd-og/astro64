@@ -15,6 +15,7 @@
 
 #define DISK_READ 1
 #define DISK_WRITE 2
+#define DISK_INFO 3
 
 #define DISK_SECTOR_SIZE 1024
 
@@ -32,7 +33,6 @@ typedef struct {
     FILE *fp;
     bool write;
     uint64_t sector_count;
-    uint16_t flags; // ready, busy, fail
 } disk_t;
 
 void vm_disk_init(vm_t *vm);

@@ -3,6 +3,7 @@
         "mem.h": "c",
         "disk.h": "c",
         "stddef.h": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "main.h": "c"
     }
 }
