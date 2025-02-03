@@ -30,7 +30,7 @@ int vm_disk_load(char *file_name, char *disk_name) {
 
 int vm_disk_read(vm_t *vm, disk_t *disk, uint64_t sector, uint64_t sector_off, uint64_t buffer_address) {
     uint8_t *ptr = vm_ptr(vm, buffer_address + (sector_off * DISK_SECTOR_SIZE));
-    fseek(disk->fp, sector * DISK_SECTOR_SIZE, SEEK_SET);
+    int fs = fseek(disk->fp, sector * DISK_SECTOR_SIZE, SEEK_SET);
     if (fread(ptr, DISK_SECTOR_SIZE, 1, disk->fp) < DISK_SECTOR_SIZE && ferror(disk->fp)) {
         printf("Disk Error: Disk reading returned %d.\n", ferror(disk->fp));
         return 1;
@@ -58,6 +58,7 @@ void *vm_disk_update(void *arg) {
     bool operating = false;
     int disk_operating = 0;
     uint64_t buffer = 0;
+    uint64_t first_sector = 0;
     uint64_t sector = 0;
     uint64_t end_sector = 0;
     vm_write8(vm, DISK_STATUS, 0);
@@ -65,7 +66,8 @@ void *vm_disk_update(void *arg) {
         if (operating) {
             disk_t *disk = disks[disk_operating];
             if (sector < end_sector) {
-                if (vm_disk_operation(vm, disk, sector, (end_sector - 1) - sector, buffer)) {
+                int res = vm_disk_operation(vm, disk, sector, sector - first_sector, buffer);
+                if (res == 1) {
                     vm_write8(vm, DISK_STATUS, DISK_ERR);
                     operating = false;
                     continue;
@@ -88,6 +90,7 @@ void *vm_disk_update(void *arg) {
                 operating = true;
                 disk->write = command == DISK_WRITE;
                 sector = vm_read64(vm, DISK_SECTOR);
+                first_sector = sector;
                 end_sector = sector + vm_read64(vm, DISK_COUNT);
                 buffer = vm_read64(vm, DISK_BUFFER);
                 vm_write8(vm, DISK_STATUS, DISK_BSY);

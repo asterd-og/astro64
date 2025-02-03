@@ -371,6 +371,7 @@ uint8_t font[] = {
 
 uint8_t *load_file(char *file_name, size_t *size) {
     FILE *file = fopen(file_name, "rb");
+    if (!file) return NULL;
     fseek(file, 0, SEEK_END);
     *size = ftell(file);
     rewind(file);
@@ -499,6 +500,10 @@ int main(int argc, char **argv) {
 
     size_t rom_size = 0; // Max of 64K (afterwards comes devices info at 0x10000)
     uint8_t *rom = load_file(firmware_name, &rom_size);
+    if (!rom) {
+        printf("Error: Couldn't load firmware.\n");
+        return 1;
+    }
     if (rom_size > 64 * 1024) {
         printf("Error: Firmware size exceeds 64K.\n");
         return 1;
