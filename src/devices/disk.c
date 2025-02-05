@@ -113,6 +113,7 @@ void *vm_disk_update(void *arg) {
 }
 
 void vm_disk_init(vm_t *vm) {
+    vm_write32(vm, DISK_DSKCNT, disk_count);
     pthread_create(&disk_dev_thread, NULL, vm_disk_update, vm);
 }
 

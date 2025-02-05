@@ -8,6 +8,7 @@
         "stdio.h": "c",
         "pthread.h": "c",
         "raylib.h": "c",
-        "kb.h": "c"
+        "kb.h": "c",
+        "stdlib.h": "c"
     }
 }

@@ -26,6 +26,7 @@ enum {
     DISK_SECTOR = 0x20008, // 8 bytes
     DISK_COUNT = 0x20010, // 8 bytes
     DISK_BUFFER = 0x20018, // 8 bytes
+    DISK_DSKCNT = 0x20020, // 4 bytes
 };
 
 typedef struct {

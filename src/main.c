@@ -7,6 +7,7 @@
 #include <raylib.h>
 #include <signal.h>
 #include <assert.h>
+#include <ctype.h>
 #include "main.h"
 #include "cpu.h"
 #include "ivt.h"
