@@ -22,15 +22,12 @@ void vm_load_rom(vm_t *vm, uint8_t *rom, size_t rom_size) {
     memcpy(vm->ram, rom, rom_size);
 }
 
-uint32_t vm_clock(vm_t *vm) {
+void vm_clock(vm_t *vm) {
     vm_run_queued_int(vm);
-    vm->cycles = 0;
     uint16_t fetch = vm_read16(vm, vm->registers[IP]);
     vm->registers[IP] += 2;
     vm_instr_t instr = vm_decode_instr(fetch);
-    vm->cycles++; // Decoding takes 1 cycle.
     vm_op_lookup[instr.opcode](vm, &instr); // Operation should update cycles accordingly.
-    return vm->cycles;
 }
 
 void vm_push8(vm_t *vm, uint8_t data) {
@@ -113,7 +110,6 @@ void *vm_src_ptr(vm_t *vm, vm_instr_t *instr) {
         // IMM
         ptr = vm_ptr(vm, vm->registers[IP]);
         vm->registers[IP] += SZ(instr->size);
-        vm->cycles++;
         break;
     }
     case 3: {
@@ -180,7 +176,6 @@ void vm_nop(vm_t *vm, vm_instr_t *instr) {
     type *dst = (type*)vm_dst_ptr(vm, instr); \
     type res = 0; \
     carry = op(*dst, *src, &res); \
-    vm->cycles++; /* doing an operation takes a cycle */ \
     *dst = res; \
     zero = res == 0
 
@@ -279,7 +274,6 @@ void vm_mov(vm_t *vm, vm_instr_t *instr) {
         break;
     }
     }
-    vm->cycles++; // Writing takes a cycle
 }
 
 void vm_jmp(vm_t *vm, vm_instr_t *instr) {
@@ -320,7 +314,6 @@ void vm_pop(vm_t *vm, vm_instr_t *instr) {
     case 2: *((uint32_t*)dst) = vm_pop32(vm); break;
     case 3: *((uint64_t*)dst) = vm_pop64(vm); break;
     }
-    vm->cycles++; // Writing takes a cycle
 }
 
 // TODO: Handle relative
@@ -343,7 +336,6 @@ void vm_and(vm_t *vm, vm_instr_t *instr) {
     case 2: *((uint32_t*)dst) = *((uint32_t*)dst) & *((uint32_t*)src); break;
     case 3: *((uint64_t*)dst) = *((uint64_t*)dst) & *((uint64_t*)src); break;
     }
-    vm->cycles++; // Writing takes a cycle
 }
 
 void vm_or(vm_t *vm, vm_instr_t *instr) {
@@ -355,7 +347,6 @@ void vm_or(vm_t *vm, vm_instr_t *instr) {
     case 2: *((uint32_t*)dst) = *((uint32_t*)dst) | *((uint32_t*)src); break;
     case 3: *((uint64_t*)dst) = *((uint64_t*)dst) | *((uint64_t*)src); break;
     }
-    vm->cycles++; // Writing takes a cycle
 }
 
 void vm_xor(vm_t *vm, vm_instr_t *instr) {
@@ -367,7 +358,6 @@ void vm_xor(vm_t *vm, vm_instr_t *instr) {
     case 2: *((uint32_t*)dst) = *((uint32_t*)dst) ^ *((uint32_t*)src); break;
     case 3: *((uint64_t*)dst) = *((uint64_t*)dst) ^ *((uint64_t*)src); break;
     }
-    vm->cycles++; // Writing takes a cycle
 }
 
 void vm_not(vm_t *vm, vm_instr_t *instr) {
@@ -378,7 +368,6 @@ void vm_not(vm_t *vm, vm_instr_t *instr) {
     case 2: *((uint32_t*)dst) = ~*((uint32_t*)dst); break;
     case 3: *((uint64_t*)dst) = ~*((uint64_t*)dst); break;
     }
-    vm->cycles++; // Writing takes a cycle
 }
 
 void vm_shl(vm_t *vm, vm_instr_t *instr) {
@@ -390,7 +379,6 @@ void vm_shl(vm_t *vm, vm_instr_t *instr) {
     case 2: *((uint32_t*)dst) = *((uint32_t*)dst) << *((uint32_t*)src); break;
     case 3: *((uint64_t*)dst) = *((uint64_t*)dst) << *((uint64_t*)src); break;
     }
-    vm->cycles++; // Writing takes a cycle
 }
 
 void vm_shr(vm_t *vm, vm_instr_t *instr) {
@@ -402,17 +390,14 @@ void vm_shr(vm_t *vm, vm_instr_t *instr) {
     case 2: *((uint32_t*)dst) = *((uint32_t*)dst) >> *((uint32_t*)src); break;
     case 3: *((uint64_t*)dst) = *((uint64_t*)dst) >> *((uint64_t*)src); break;
     }
-    vm->cycles++; // Writing takes a cycle
 }
 
 void vm_sei(vm_t *vm, vm_instr_t *instr) {
     vm->registers[FLAGS] |= F_INT;
-    vm->cycles++;
 }
 
 void vm_sdi(vm_t *vm, vm_instr_t *instr) {
     vm->registers[FLAGS] &= ~F_INT;
-    vm->cycles++;
 }
 
 void vm_int(vm_t *vm, vm_instr_t *instr) {

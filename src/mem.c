@@ -9,42 +9,34 @@ void *vm_ptr(vm_t *vm, uint64_t address) {
 }
 
 uint8_t vm_read8(vm_t *vm, uint64_t address) {
-    vm->cycles++;
     return *((uint8_t*)vm_ptr(vm, address));
 }
 
 uint16_t vm_read16(vm_t *vm, uint64_t address) {
-    vm->cycles++;
     return *((uint16_t*)vm_ptr(vm, address));
 }
 
 uint32_t vm_read32(vm_t *vm, uint64_t address) {
-    vm->cycles++;
     return *((uint32_t*)vm_ptr(vm, address));
 }
 
 uint64_t vm_read64(vm_t *vm, uint64_t address) {
-    vm->cycles++;
     return *((uint64_t*)vm_ptr(vm, address));
 }
 
 void vm_write8(vm_t *vm, uint64_t address, uint8_t data) {
-    vm->cycles++;
     *((uint8_t*)vm_ptr(vm, address)) = data;
 }
 
 void vm_write16(vm_t *vm, uint64_t address, uint16_t data) {
-    vm->cycles++;
     *((uint16_t*)vm_ptr(vm, address)) = data;
 }
 
 void vm_write32(vm_t *vm, uint64_t address, uint32_t data) {
-    vm->cycles++;
     *((uint32_t*)vm_ptr(vm, address)) = data;
 }
 
 void vm_write64(vm_t *vm, uint64_t address, uint64_t data) {
-    vm->cycles++;
     *((uint64_t*)vm_ptr(vm, address)) = data;
 }
 

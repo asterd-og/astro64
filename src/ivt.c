@@ -5,6 +5,9 @@
 void vm_raise(vm_t *vm, uint8_t vector) {
     if (!(vm->registers[FLAGS] & F_INT))
         return;
+    if (vm->ram[I_EOI] == 0)
+        vm->ram[I_EOI] = 1;
+    else return;
     vm_ivt_t *tbl = (vm_ivt_t*)vm_ptr(vm, vm->registers[IVTBL]);
     if (vector > tbl->count - 1)
         return;

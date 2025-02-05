@@ -61,7 +61,7 @@ void *vm_disk_update(void *arg) {
     uint64_t first_sector = 0;
     uint64_t sector = 0;
     uint64_t end_sector = 0;
-    vm_write8(vm, DISK_STATUS, 0);
+    vm_write8(vm, DISK_STATUS, DISK_RDY);
     while (vm_running) {
         if (operating) {
             disk_t *disk = disks[disk_operating];

@@ -21,8 +21,8 @@
 
 enum {
     DISK_SELECT = 0x20000, // 4 bytes
-    DISK_STATUS = 0x20004, // 2 bytes
-    DISK_COMMAND = 0x20006, // 1 byte
+    DISK_STATUS = 0x20004, // 1 byte
+    DISK_COMMAND = 0x20005, // 1 byte
     DISK_SECTOR = 0x20008, // 8 bytes
     DISK_COUNT = 0x20010, // 8 bytes
     DISK_BUFFER = 0x20018, // 8 bytes

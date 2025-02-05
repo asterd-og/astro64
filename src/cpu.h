@@ -36,7 +36,6 @@ typedef struct {
     bool halted;
     uint8_t *ram;
     size_t ram_size;
-    uint32_t cycles;
     vm_int_t *queued_int;
 } vm_t;
 
@@ -46,7 +45,7 @@ extern op_func vm_op_lookup[64];
 
 vm_t *vm_create(size_t ram_size);
 void vm_load_rom(vm_t *vm, uint8_t *rom, size_t rom_size);
-uint32_t vm_clock(vm_t *vm); // Returns cycles ran
+void vm_clock(vm_t *vm); // Returns cycles ran
 void vm_push8(vm_t *vm, uint8_t data);
 void vm_push16(vm_t *vm, uint16_t data);
 void vm_push32(vm_t *vm, uint32_t data);

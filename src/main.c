@@ -406,19 +406,48 @@ static inline bool bit_address_from_mask(uint32_t convert, int ret) {
 double last_cursor_time = 0.0f;
 bool draw_cursor = true;
 
+uint32_t color_palette[] = {
+    0x000000FF,
+    0x555555FF,
+    0xAAAAAAFF,
+    0xFFFFFFFF,
+    0xFF0000FF,
+    0x00FF00FF,
+    0x0000FFFF,
+    0xFFFF00FF,
+    0xFF00FFFF,
+    0x00FFFFFF,
+    0xFFA500FF,
+    0x800080FF,
+    0x8B4513FF,
+    0xFFC0CBFF,
+    0x90EE90FF,
+    0xADD8E6FF
+};
+
+uint32_t get_color_from_palette(vm_t *vm, uint8_t color) {
+    return *(uint32_t*)(vm->ram + 0x10010 + (color * 4));
+}
+
 void draw_screen(vm_t *vm) {
     ClearBackground(BLACK);
-    for (uint32_t idx = 0; idx < rows * cols; idx++) {
-        uint32_t point = vm->ram[0xB010+idx] * font_height;
-        if (point == 0) continue;
-        uint32_t x = idx % cols;
-        uint32_t y = idx / cols;
+    Color last_fg = GetColor(color_palette[2]);
+    for (uint32_t idx = 0; idx < rows * cols * 2; idx += 2) {
+        uint32_t point = vm->ram[0x10100+idx] * font_height;
+        if (!point) continue;
+        uint8_t color = vm->ram[0x10100+(idx+1)];
+        uint8_t fg = color & 0xF;
+        uint8_t bg = (color >> 4);
+        last_fg = GetColor(get_color_from_palette(vm, fg));
+        uint32_t x = (idx / 2) % cols;
+        uint32_t y = (idx / 2) / cols;
+        DrawRectangle(x * font_width, y * font_height, font_width, font_height, GetColor(get_color_from_palette(vm, bg)));
         for (uint32_t i = 0; i < font_height; i++)
             for (uint32_t j = 0; j < font_width; j++)
                 if (bit_address_from_mask(font[point+i], j + 1)) {
                     uint32_t cx = (x * font_width) + (font_width - j);
                     uint32_t cy = (y * font_height) + i;
-                    DrawPixel(cx, cy, WHITE);
+                    DrawPixel(cx, cy, last_fg);
                 }
     }
     if (GetTime() - last_cursor_time > 0.5f) {
@@ -426,9 +455,9 @@ void draw_screen(vm_t *vm) {
         draw_cursor = !draw_cursor;
     }
     if (draw_cursor) {
-        uint32_t cursor_x = *(uint32_t*)(vm->ram + 0xB000) * font_width;
-        uint32_t cursor_y = *(uint32_t*)(vm->ram + 0xB004) * font_height;
-        DrawRectangle(cursor_x, cursor_y, font_width, font_height, WHITE);
+        uint32_t cursor_x = *(uint32_t*)(vm->ram + 0x10000) * font_width;
+        uint32_t cursor_y = *(uint32_t*)(vm->ram + 0x10004) * font_height;
+        DrawRectangle(cursor_x, cursor_y, font_width, font_height, last_fg);
     }
 }
 
@@ -523,6 +552,13 @@ int main(int argc, char **argv) {
     InitWindow(screen_width, screen_height, "Astro64 Emulator");
 
     vm_init_devices(vm);
+
+    vm_write32(vm, 0x10008, cols);
+    vm_write32(vm, 0x1000C, rows);
+
+    for (int i = 0; i < 16; i++) {
+        vm_write32(vm, 0x10010 + (i * 4), color_palette[i]);
+    }
 
     // Monitor
     pthread_t monitor;

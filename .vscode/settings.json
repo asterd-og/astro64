@@ -4,6 +4,10 @@
         "disk.h": "c",
         "stddef.h": "c",
         "stdbool.h": "c",
-        "main.h": "c"
+        "main.h": "c",
+        "stdio.h": "c",
+        "pthread.h": "c",
+        "raylib.h": "c",
+        "kb.h": "c"
     }
 }

@@ -7,5 +7,7 @@
 #define I_PF 1
 #define I_VBLANK 2
 
+#define I_EOI 0x13000
+
 void vm_raise(vm_t *vm, uint8_t vector);
 void vm_run_queued_int(vm_t *vm);
